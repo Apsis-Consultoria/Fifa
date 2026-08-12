@@ -1,4 +1,5 @@
 import { EMBLEMA_CLARO } from '@/lib/tema';
+import { comBase } from '@/lib/assets';
 
 /**
  * Marca do torneio para a barra lateral.
@@ -12,7 +13,7 @@ export function MarcaTorneio({ largura = 148, className = '' }) {
   return (
     <div className={`flex justify-center ${className}`}>
       <img
-        src={EMBLEMA_CLARO}
+        src={comBase(EMBLEMA_CLARO)}
         alt="Copa do Mundo Feminina da FIFA Brasil 2027"
         style={{ width: largura }}
         className="h-auto object-contain"

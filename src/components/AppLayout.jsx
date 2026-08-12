@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, Building2, LogOut } from 'lucide-react';
 import { MarcaTorneio } from '@/components/CopaLayout';
 import { TEMA, FONTE, RAIO_PILULA } from '@/lib/tema';
+import { comBase } from '@/lib/assets';
 
 const ITENS = [
   { to: '/painel',      icone: LayoutDashboard, label: 'Visão gerencial' },
@@ -69,7 +70,7 @@ export default function AppLayout({ children }) {
 
           <div className="pt-3 px-4 flex items-center gap-2">
             <img
-              src="/login/logo-apsis-transp.png"
+              src={comBase("/login/logo-apsis-transp.png")}
               alt="APSIS"
               className="h-5 object-contain brightness-0 invert opacity-70"
               onError={(e) => { e.currentTarget.style.display = 'none'; }}

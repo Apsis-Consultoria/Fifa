@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { TEMA, FONTE, EMBLEMA_PAINEL } from '@/lib/tema';
+import { comBase } from '@/lib/assets';
 
 /**
  * Layout de login no padrao do portal APSIS, na identidade da Copa.
@@ -117,7 +118,7 @@ export default function CopaLoginLayout({
         {imgs.map((foto, i) => (
           <img
             key={foto.src}
-            src={foto.src}
+            src={comBase(foto.src)}
             alt=""
             aria-hidden="true"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -185,7 +186,7 @@ export default function CopaLoginLayout({
               fundo escuro; o filtro passa a marca para branco preservando o alfa.
               Altura nativa e 39px - manter perto disso evita borrar. */}
           <img
-            src="/fifa-logo.webp"
+            src={comBase("/fifa-logo.webp")}
             alt="FIFA"
             className="h-8 lg:h-9 w-auto object-contain self-start"
             style={{ filter: 'brightness(0) invert(1)' }}
@@ -199,7 +200,7 @@ export default function CopaLoginLayout({
           style={{ background: TEMA.creme }}
         >
           <img
-            src={EMBLEMA_PAINEL}
+            src={comBase(EMBLEMA_PAINEL)}
             alt="Copa do Mundo Feminina da FIFA 2027"
             className="h-44 lg:h-[235px] object-contain flex-shrink-0"
           />
@@ -210,7 +211,7 @@ export default function CopaLoginLayout({
 
           <div className="absolute bottom-12 inset-x-0 flex flex-col items-center gap-1.5">
             <img
-              src="/login/logo-apsis-transp.png"
+              src={comBase("/login/logo-apsis-transp.png")}
               alt="APSIS Consultoria"
               className="h-6 object-contain opacity-70"
               onError={(e) => { e.currentTarget.style.display = 'none'; }}

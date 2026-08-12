@@ -6,6 +6,7 @@ import { VIEWBOX, ESTADOS, projetar, paraPercentual } from '@/lib/mapaBrasil';
 import { SEDES } from '@/lib/sedes';
 import { desamontoar } from '@/lib/declutter';
 import { TEMA, corDoProgresso } from '@/lib/tema';
+import { comBase } from '@/lib/assets';
 
 // Largura de referencia do mapa. Os marcadores sao dimensionados em pixels contra
 // ela e depois convertidos para percentual do quadro, entao crescem junto com o
@@ -93,7 +94,7 @@ function PinEstadio({ inst, aoClicar, destacado, aoEntrar, aoSair }) {
         style={{ transformOrigin: 'center bottom', transform: destacado ? 'scale(1.3)' : 'none' }}
       >
         <img
-          src={inst.imagem}
+          src={comBase(inst.imagem)}
           alt={inst.nome}
           className="w-full h-full object-contain drop-shadow"
           draggable={false}

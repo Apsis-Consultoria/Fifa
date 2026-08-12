@@ -13,7 +13,11 @@ function Protegida({ children }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    // `basename` e a mesma base do Vite: no dev vale `/`, publicado no GitHub Pages
+    // vale `/Fifa/`. Sem ele as rotas continuariam sendo escritas na raiz do
+    // dominio, e um `navigate('/painel')` sairia do site para uma pagina que o
+    // GitHub nao conhece.
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <Toaster position="top-right" richColors />
       <Routes>
         <Route path="/" element={<Login />} />
