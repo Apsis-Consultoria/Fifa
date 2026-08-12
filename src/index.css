@@ -1,0 +1,141 @@
+/* Sora entra para os titulos da tela de login, no mesmo padrao do portal-apsis. */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Poppins e o primeiro fallback que a propria FIFA declara para a FIFASans
+       (fonte proprietaria, nao distribuida) no site do torneio. */
+    --font-inter: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+
+    /* Apsis Brand — extraído de #1A4731, #F47920, #F4F6F4 */
+    --background:             120 10% 96%;   /* #F4F6F4 */
+    --foreground:             138 25% 14%;   /* #1A2B1F */
+
+    --card:                   0 0% 100%;
+    --card-foreground:        138 25% 14%;
+
+    --popover:                0 0% 100%;
+    --popover-foreground:     138 25% 14%;
+
+    --primary:                151 46% 19%;   /* #1A4731 verde escuro */
+    --primary-foreground:     0 0% 100%;
+
+    --secondary:              120 10% 94%;
+    --secondary-foreground:   151 46% 19%;
+
+    --muted:                  120 10% 94%;
+    --muted-foreground:       132 10% 40%;   /* #5C7060 */
+
+    --accent:                 25 91% 54%;    /* #F47920 laranja */
+    --accent-foreground:      0 0% 100%;
+
+    --destructive:            0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border:                 120 8% 88%;
+    --input:                  120 8% 88%;
+    --ring:                   151 46% 19%;
+
+    --radius: 0.5rem;
+
+    /* Sidebar — verde escuro Apsis */
+    --sidebar-background:             151 46% 19%;   /* #1A4731 */
+    --sidebar-foreground:             0 0% 100%;
+    --sidebar-primary:                25 91% 54%;    /* laranja no item ativo */
+    --sidebar-primary-foreground:     0 0% 100%;
+    --sidebar-accent:                 149 45% 26%;   /* #245E40 hover */
+    --sidebar-accent-foreground:      0 0% 100%;
+    --sidebar-border:                 149 45% 26%;
+    --sidebar-ring:                   25 91% 54%;
+  }
+
+  .dark {
+    --background:             151 30% 8%;
+    --foreground:             120 10% 94%;
+
+    --card:                   151 30% 11%;
+    --card-foreground:        120 10% 94%;
+
+    --popover:                151 30% 11%;
+    --popover-foreground:     120 10% 94%;
+
+    --primary:                151 46% 30%;
+    --primary-foreground:     0 0% 100%;
+
+    --secondary:              151 20% 16%;
+    --secondary-foreground:   120 10% 94%;
+
+    --muted:                  151 20% 16%;
+    --muted-foreground:       132 10% 60%;
+
+    --accent:                 25 91% 54%;
+    --accent-foreground:      0 0% 100%;
+
+    --destructive:            0 62% 30%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border:                 151 20% 20%;
+    --input:                  151 20% 20%;
+    --ring:                   151 46% 30%;
+
+    --sidebar-background:     151 46% 12%;
+    --sidebar-foreground:     120 10% 94%;
+    --sidebar-primary:        25 91% 54%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:         151 46% 18%;
+    --sidebar-accent-foreground: 120 10% 94%;
+    --sidebar-border:         151 46% 18%;
+    --sidebar-ring:           25 91% 54%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground font-inter;
+  }
+}
+
+@layer components {
+  /* Faixa das fotos do login (CopaLoginLayout).
+     No mobile a foto ocupa a tela toda. No desktop ela para em 76% da largura,
+     logo depois de onde o painel de login passa a cobrir (a elipse chega a 66%):
+     e essa folga que da recorte horizontal suficiente para o object-position
+     escolher qual parte da foto aparece. A mascara apaga a emenda com o
+     grafismo, que fica escondida atras do painel. */
+  .faixa-fotos {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  /* Mapa das cidades-sede (MapaSedes).
+     O desenho e quadrado: solto na largura de uma tela grande, ele sozinho passava
+     de mil pixels de altura e empurrava os cartoes para fora da dobra. A coluna do
+     mapa e limitada pela ALTURA da janela, e a lista de instalacoes fica com a
+     sobra da largura - assim nao volta a faixa vazia dos lados. */
+  .grade-mapa {
+    display: grid;
+  }
+
+  @media (min-width: 1024px) {
+    .grade-mapa {
+      grid-template-columns: minmax(0, min(62vh, 58%)) 1fr;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .faixa-fotos {
+      width: 76%;
+      -webkit-mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+      mask-image: linear-gradient(to right, #000 88%, transparent 100%);
+    }
+  }
+}

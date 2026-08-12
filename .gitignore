@@ -1,0 +1,19 @@
+node_modules/
+dist/
+.env
+.env.local
+*.local
+.DS_Store
+
+# Renders de conferencia usados para calibrar enquadramento e tamanho das artes.
+.tmp-preview/
+
+# Documentos internos. Ficam FORA do repositorio porque ele e publico e eles trazem
+# material estrategico da APSIS: transcricao da reuniao com o cliente, trechos do
+# Q&A da RFI, posicionamento comercial e o roteiro da proposta. Continuam no disco,
+# ao lado do codigo, e o contexto vivo do projeto esta no Obsidian, em
+# `projetos/FIFA27-Gestao-Regulatoria/`.
+HANDOFF.md
+PLANO.md
+.remember/
+.claude/
