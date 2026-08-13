@@ -180,7 +180,14 @@ export default function MapaSedes({ estado }) {
       if (alvo) navigate(`/instalacoes/${alvo.getAttribute('data-ir')}`);
     });
 
+    // O Leaflet calcula o tamanho uma vez, na criacao, e nao percebe sozinho quando
+    // a coluna muda de largura - a camada de blocos fica do tamanho antigo e sobra
+    // faixa cinza na borda. O observador avisa a cada mudanca de caixa.
+    const observador = new ResizeObserver(() => mapa.invalidateSize());
+    observador.observe(telaRef.current);
+
     return () => {
+      observador.disconnect();
       mapa.remove();
       mapaRef.current = null;
       marcadoresRef.current.clear();
@@ -262,8 +269,8 @@ export default function MapaSedes({ estado }) {
         </div>
       </div>
 
-      <div className="grade-mapa">
-        <div className="relative">
+      <div className="grade-mapa overflow-hidden">
+        <div className="relative min-w-0">
           {/* Alternancia de fundo, no canto do mapa - acima dos controles do Leaflet */}
           <div className="absolute top-3 right-3 z-[500] flex items-center gap-1 p-1 bg-white rounded-full border border-[#E2E8F0] shadow-sm">
             {Object.entries(CAMADAS).map(([id, { rotulo, icone: Icone }]) => {
@@ -291,11 +298,11 @@ export default function MapaSedes({ estado }) {
         </div>
 
         {/* Lista lateral: TODAS as instalacoes, da menos a mais conforme */}
-        <aside className="border-t lg:border-t-0 lg:border-l border-slate-100 p-3 overflow-y-auto">
+        <aside className="border-t lg:border-t-0 lg:border-l border-slate-100 p-3 min-w-0 overflow-x-hidden overflow-y-auto">
           <p className="px-3 pt-1 pb-2 text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">
             Estádios de competição
           </p>
-          <div className="space-y-0.5">
+          <div className="lista-instalacoes">
             {estadios.map((inst) => (
               <ItemLista
                 key={inst.id}
@@ -313,7 +320,7 @@ export default function MapaSedes({ estado }) {
               <p className="px-3 pt-4 pb-2 text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">
                 Outras instalações
               </p>
-              <div className="space-y-0.5">
+              <div className="lista-instalacoes">
                 {outras.map((inst) => (
                   <ItemLista
                     key={inst.id}

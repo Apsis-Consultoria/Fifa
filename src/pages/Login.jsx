@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Loader2, Mail, Lock, ArrowRight, PlayCircle } from 'lucide-react';
 import CopaLoginLayout from '@/components/CopaLoginLayout';
-import { TEMA, RAIO_PILULA, FONTE_TITULO } from '@/lib/tema';
+import { TEMA, RAIO_PILULA, FONTE_TITULO, BOTAO_PRIMARIO, BOTAO_SECUNDARIO } from '@/lib/tema';
 
 // Prototipo: nao ha autenticacao real. Ao plugar o backend, este handler chama a
 // Edge Function client-login do Secure Share, que ja emite token de sessao assinado.
@@ -18,14 +18,18 @@ export default function Login() {
   const [senha, setSenha] = useState('');
   const [carregando, setCarregando] = useState(false);
 
-  function entrar(e) {
-    e.preventDefault();
+  function abrirSessao(usuario) {
     setCarregando(true);
     // Pequeno atraso para a transicao nao parecer instantanea demais.
     setTimeout(() => {
-      sessionStorage.setItem('fifa27_sessao', email.trim() || 'demo@apsis.com.br');
+      sessionStorage.setItem('fifa27_sessao', usuario);
       navigate('/painel', { replace: true });
     }, 450);
+  }
+
+  function entrar(e) {
+    e.preventDefault();
+    abrirSessao(email.trim() || 'demo@apsis.com.br');
   }
 
   return (
@@ -76,13 +80,26 @@ export default function Login() {
           type="submit"
           disabled={carregando}
           className="w-full flex items-center justify-center gap-2 py-3.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60 shadow-sm !mt-5"
-          style={{ background: TEMA.amarelo, color: TEMA.azul, borderRadius: RAIO_PILULA }}
+          style={BOTAO_PRIMARIO}
         >
           {carregando ? (
             <><Loader2 className="h-4 w-4 animate-spin" /> Entrando...</>
           ) : (
             <>Entrar <ArrowRight className="h-4 w-4" /></>
           )}
+        </button>
+
+        {/* Atalho para quem so quer ver o sistema: nao ha autenticacao real, e
+            pedir para inventar um usuario antes de olhar so atrapalha. */}
+        <button
+          type="button"
+          disabled={carregando}
+          onClick={() => abrirSessao('demo@apsis.com.br')}
+          className="w-full flex items-center justify-center gap-2 py-3 text-sm font-semibold transition-colors hover:bg-[#1807E5]/[0.06] disabled:opacity-60"
+          style={BOTAO_SECUNDARIO}
+        >
+          <PlayCircle className="h-4 w-4" />
+          Entrar no modo demonstração
         </button>
 
         <p className="text-center text-[11px] text-slate-400 pt-1">

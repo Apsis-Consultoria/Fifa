@@ -1,4 +1,5 @@
-import { TEMA, FONTE, MARCA, LOGOTIPO_BRANCO } from '@/lib/tema';
+import { useLayoutEffect, useRef } from 'react';
+import { TEMA, FONTE, MARCA } from '@/lib/tema';
 import { comBase } from '@/lib/assets';
 
 /**
@@ -32,6 +33,21 @@ import { comBase } from '@/lib/assets';
 // mais de 1900px de largura na tela, visivelmente pixelada. O original sem perda
 // esta em assets-fonte/hero-fwwc2027.png.
 export const FOTO = '/login-copa/hero-fwwc2027.webp';
+
+/**
+ * Onde fica o centro do que se ve na arte, em fracao da largura do arquivo.
+ *
+ * Medido, nao chutado: pesando o quanto cada pixel se afasta do azul de fundo, a
+ * taca e o letreiro tem centro em 55,5% - a arte NAO e simetrica. Foi por isso que
+ * centrar a imagem "no olho" sempre deixava o conteudo puxado para a direita.
+ */
+const FOCO = 0.555;
+
+/**
+ * Ate onde a tela e realmente visivel, em fracao da largura, no desktop.
+ * O painel de login cobre a partir dai (a elipse chega a 66%).
+ */
+const ATE_ONDE_SE_VE = 0.66;
 
 /** Grafismo do torneio - base sob as fotos, e fundo inteiro enquanto nao houver fotos. */
 function FundoGrafico() {
@@ -79,6 +95,58 @@ export default function CopaLoginLayout({
   subheadline = 'Copa do Mundo Feminina da FIFA Brasil 2027',
   copyright = '© 2026 APSIS Consultoria. Todos os direitos reservados.',
 }) {
+  const faixaRef = useRef(null);
+  const fotoRef = useRef(null);
+
+  /**
+   * Encaixa a arte de modo que o centro do conteudo caia no meio do espaco que
+   * sobra a esquerda do painel de login.
+   *
+   * Nao da para fazer isso com `object-position`: ele so distribui o recorte que
+   * o `cover` ja definiu, e nessa proporcao de tela o recorte disponivel era menor
+   * do que o deslocamento necessario - o conteudo empacava antes de chegar ao
+   * centro. Aqui a imagem e desenhada na altura da faixa, com a largura que a
+   * proporcao pedir, e a conta diz de onde ela comeca. Pode comecar em negativo:
+   * e o mesmo que recortar a esquerda.
+   */
+  function enquadrar() {
+    const faixa = faixaRef.current;
+    const foto = fotoRef.current;
+    if (!faixa || !foto || !foto.naturalWidth) return;
+
+    const { width: larguraFaixa, height: altura } = faixa.getBoundingClientRect();
+    const desktop = window.innerWidth >= 1024;
+    const proporcao = foto.naturalWidth / foto.naturalHeight;
+
+    // A imagem ocupa a altura da faixa e mantem a proporcao. Sem ampliar: ela so
+    // desliza na horizontal.
+    const largura = altura * proporcao;
+
+    // Meio do que o usuario efetivamente enxerga.
+    const alvo = desktop
+      ? (window.innerWidth * ATE_ONDE_SE_VE) / 2
+      : larguraFaixa / 2;
+
+    // Ate onde a imagem PRECISA chegar. No desktop nao e ate o fim da faixa: o
+    // trecho depois de ATE_ONDE_SE_VE fica atras do painel de login, entao a
+    // imagem pode terminar ali sem que apareca vazio nenhum. E essa folga que
+    // deixa deslizar o suficiente sem precisar ampliar a arte.
+    const precisaCobrirAte = desktop
+      ? window.innerWidth * (ATE_ONDE_SE_VE + 0.02)
+      : larguraFaixa;
+
+    const maisAEsquerda = Math.min(0, precisaCobrirAte - largura);
+    foto.style.width = `${largura}px`;
+    foto.style.left = `${Math.max(maisAEsquerda, Math.min(0, alvo - FOCO * largura))}px`;
+    foto.style.top = '0px';
+  }
+
+  useLayoutEffect(() => {
+    enquadrar();
+    window.addEventListener('resize', enquadrar);
+    return () => window.removeEventListener('resize', enquadrar);
+  }, []);
+
   return (
     <div
       className="relative min-h-screen overflow-hidden"
@@ -89,14 +157,15 @@ export default function CopaLoginLayout({
 
       {/* A arte do torneio, fixa. A mascara em `.faixa-fotos` desfaz a emenda com
           o grafismo, que fica escondida atras do painel. */}
-      <div className="faixa-fotos">
+      <div className="faixa-fotos" ref={faixaRef}>
         <img
+          ref={fotoRef}
           src={comBase(foto)}
           alt=""
           aria-hidden="true"
+          onLoad={enquadrar}
           onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          className="absolute inset-0 w-full h-full object-cover"
-          style={{ objectPosition: 'center center' }}
+          className="absolute max-w-none"
         />
       </div>
 
@@ -136,19 +205,12 @@ export default function CopaLoginLayout({
 
       {/* Conteudo */}
       <div className="relative z-10 min-h-screen flex flex-col lg:grid lg:grid-cols-[64%_36%]">
-        {/* Esquerda: o logotipo no alto e, no rodape, o nome do torneio sobre a
-            marca da FIFA. O titulo do SISTEMA nao fica aqui - ele vive no painel
-            branco, junto do formulario. */}
-        <div className="flex flex-col justify-between px-8 pt-10 pb-12 lg:pl-16 lg:pr-12 lg:pt-12 lg:pb-16 text-white">
-          {/* Versao de letreiro branco: a preta sumiria na arte azul-marinho */}
-          <img
-            src={comBase(LOGOTIPO_BRANCO)}
-            alt="Copa do Mundo Feminina da FIFA Brasil 2027"
-            className="h-20 lg:h-24 w-auto object-contain self-start"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
-
-          <div className="mt-16 space-y-3">
+        {/* Esquerda: so a arte, e no rodape o nome do torneio sobre a marca da
+            FIFA. Nao ha logotipo no alto: a propria arte ja traz a taca e o
+            letreiro, e a marca repetida no canto so competia com eles. O titulo do
+            SISTEMA tambem nao fica aqui - ele vive no painel branco. */}
+        <div className="flex flex-col justify-end px-8 pt-10 pb-12 lg:pl-16 lg:pr-12 lg:pt-12 lg:pb-16 text-white">
+          <div className="space-y-3">
             {subheadline && (
               <p
                 className="text-[11px] lg:text-xs uppercase tracking-[0.22em] font-semibold"

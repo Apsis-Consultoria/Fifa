@@ -135,11 +135,31 @@
 
   @media (min-width: 1024px) {
     .grade-mapa {
-      grid-template-columns: 1fr 288px;
+      /* A faixa da direita é larga o bastante para a lista abrir em duas colunas
+         (ver `.lista-instalacoes`), que foi como o Filipe aprovou.
+         `minmax(0, ...)`: sem isso a coluna não pode ficar menor que o conteúdo
+         dela, e um nome comprido de instalação empurrava a caixa para além da tela,
+         criando barra de rolagem horizontal. */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
     }
 
     .tela-mapa {
       height: min(60vh, 560px);
+    }
+  }
+
+  /* Lista das instalações, ao lado do mapa: uma coluna no estreito, duas quando
+     há largura. Duas colunas deixam as 13 instalações visíveis sem rolar. */
+  .lista-instalacoes {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  @media (min-width: 1280px) {
+    .lista-instalacoes {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 8px;
     }
   }
 

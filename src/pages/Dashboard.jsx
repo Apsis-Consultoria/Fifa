@@ -30,9 +30,9 @@ function Indicador({ icone: Icone, titulo, valor, detalhe, cor }) {
   );
 }
 
-function Cartao({ titulo, descricao, children }) {
+function Cartao({ titulo, descricao, children, classe = '' }) {
   return (
-    <section className={`${CLASSE_CARTAO} px-5 py-4`}>
+    <section className={`${classe} ${CLASSE_CARTAO} px-5 py-4 min-w-0`}>
       <h2 className="text-[13px] font-semibold text-slate-700">{titulo}</h2>
       {descricao && <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{descricao}</p>}
       <div className="mt-3">{children}</div>
@@ -177,10 +177,40 @@ export default function Dashboard() {
         <Indicador icone={AlertTriangle} titulo="Abaixo de 50%" valor={criticas.length}            detalhe="instalações críticas"        cor={TEMA.critico} />
       </section>
 
-      {/* Tres cartoes acima do mapa e tres abaixo, sempre em tres colunas: assim
-          cada faixa cabe inteira na tela, sem rolagem para ver um cartao. */}
-      <div className="grid gap-4 lg:grid-cols-3 mb-5">
-        <section className={`${CLASSE_CARTAO} px-5 py-4 flex flex-col items-center justify-center gap-4`}>
+      <div className="mb-5">
+        <MapaSedes estado={estado} />
+      </div>
+
+      {criticas.length > 0 && (
+        // O realce vai por evento, e nao por classe, para usar a constante REALCE do
+        // tema em vez de repetir o azul diluido aqui.
+        <button
+          onClick={() => navigate(`/instalacoes/${criticas[0].id}`)}
+          onMouseEnter={(e) => { e.currentTarget.style.background = REALCE; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
+          className={`${CLASSE_CARTAO_CLICAVEL} mb-5 w-full px-5 py-3 flex items-center gap-4 text-left`}
+        >
+          <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: TEMA.critico }} />
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-medium text-slate-700">
+              Prioridade: {criticas[0].nome}
+            </span>
+            <span className="block text-[11px] text-slate-400 mt-0.5">
+              Menor conformidade do portfólio, com {criticas[0].pendentes} documentos pendentes.
+            </span>
+          </span>
+          <span className="font-bold tabular-nums flex-shrink-0" style={{ fontFamily: FONTE, color: corDoProgresso(criticas[0].percentual) }}>
+            {criticas[0].percentual}%
+          </span>
+        </button>
+      )}
+
+      {/* Larguras diferentes, em doze colunas: a rosca e um numero so e nao precisa
+          de um terco da tela, enquanto as listas de conformidade tem oito e seis
+          linhas. Com tres colunas iguais, a rosca ficava numa caixa vazia demais e
+          as listas espremidas. */}
+      <div className="grid gap-4 lg:grid-cols-12 mb-5">
+        <section className={`lg:col-span-3 min-w-0 ${CLASSE_CARTAO} px-5 py-4 flex flex-col items-center justify-center gap-4`}>
           <Donut
             tamanho={128}
             espessura={19}
@@ -216,6 +246,7 @@ export default function Dashboard() {
         </section>
 
         <Cartao
+          classe="lg:col-span-5"
           titulo="Conformidade por cidade"
           descricao="Cada cidade-sede soma o estádio e as instalações de apoio."
         >
@@ -234,6 +265,7 @@ export default function Dashboard() {
         </Cartao>
 
         <Cartao
+          classe="lg:col-span-4"
           titulo="Conformidade por tipologia"
           descricao="Cada tipologia exige um conjunto próprio de documentos, conforme o Anexo 2."
         >
@@ -251,34 +283,6 @@ export default function Dashboard() {
           </div>
         </Cartao>
 
-      </div>
-
-      {criticas.length > 0 && (
-        // O realce vai por evento, e nao por classe, para usar a constante REALCE do
-        // tema em vez de repetir o azul diluido aqui.
-        <button
-          onClick={() => navigate(`/instalacoes/${criticas[0].id}`)}
-          onMouseEnter={(e) => { e.currentTarget.style.background = REALCE; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
-          className={`${CLASSE_CARTAO_CLICAVEL} mb-5 w-full px-5 py-3 flex items-center gap-4 text-left`}
-        >
-          <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: TEMA.critico }} />
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm font-medium text-slate-700">
-              Prioridade: {criticas[0].nome}
-            </span>
-            <span className="block text-[11px] text-slate-400 mt-0.5">
-              Menor conformidade do portfólio, com {criticas[0].pendentes} documentos pendentes.
-            </span>
-          </span>
-          <span className="font-bold tabular-nums flex-shrink-0" style={{ fontFamily: FONTE, color: corDoProgresso(criticas[0].percentual) }}>
-            {criticas[0].percentual}%
-          </span>
-        </button>
-      )}
-
-      <div className="mb-5">
-        <MapaSedes estado={estado} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
