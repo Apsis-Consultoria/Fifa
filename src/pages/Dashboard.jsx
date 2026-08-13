@@ -177,10 +177,6 @@ export default function Dashboard() {
         <Indicador icone={AlertTriangle} titulo="Abaixo de 50%" valor={criticas.length}            detalhe="instalações críticas"        cor={TEMA.critico} />
       </section>
 
-      <div className="mb-5">
-        <MapaSedes estado={estado} />
-      </div>
-
       {criticas.length > 0 && (
         // O realce vai por evento, e nao por classe, para usar a constante REALCE do
         // tema em vez de repetir o azul diluido aqui.
@@ -204,6 +200,10 @@ export default function Dashboard() {
           </span>
         </button>
       )}
+
+      <div className="mb-5">
+        <MapaSedes estado={estado} />
+      </div>
 
       {/* Larguras diferentes, em doze colunas: a rosca e um numero so e nao precisa
           de um terco da tela, enquanto as listas de conformidade tem oito e seis
