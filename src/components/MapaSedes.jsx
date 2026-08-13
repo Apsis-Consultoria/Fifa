@@ -1,106 +1,98 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Minus, Maximize2 } from 'lucide-react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { Map as MapaRuas, Satellite } from 'lucide-react';
 import { progresso } from '@/lib/store';
-import { VIEWBOX, ESTADOS, projetar, paraPercentual } from '@/lib/mapaBrasil';
-import { SEDES } from '@/lib/sedes';
-import { desamontoar } from '@/lib/declutter';
-import { TEMA, corDoProgresso } from '@/lib/tema';
-import { comBase } from '@/lib/assets';
-
-// Largura de referencia do mapa. Os marcadores sao dimensionados em pixels contra
-// ela e depois convertidos para percentual do quadro, entao crescem junto com o
-// mapa: a mancha de cada estadio no Brasil e sempre a mesma, em qualquer tela.
-const MAPA_PX = 760;
+import { iconeDaTipologia } from '@/components/IconeTipologia';
+import IconeTipologia from '@/components/IconeTipologia';
+import { TEMA, corDoProgresso, CLASSE_CARTAO, REALCE } from '@/lib/tema';
 
 /**
- * Area em pixels que toda arte de estadio ocupa na tela.
+ * Mapa das instalacoes do torneio.
  *
- * As artes vem da FIFA em proporcoes bem diferentes - de 1,14 (Maracana) a 2,03
- * (Fonte Nova) de largura por altura. Fixar so a largura, como era antes, deixava
- * umas com 27 px de altura e outras com 41, e no mapa isso lia como estadios de
- * tamanhos diferentes. Aqui o que se iguala e a AREA: cada arte recebe
- * largura x altura = AREA_ALVO, mantida a sua proporcao. O ajuste fino por desenho
- * (o cenario em volta do estadio varia muito) vem de `arte.escala`, em sedes.js.
+ * Mapa de verdade, com blocos do OpenStreetMap, no mesmo padrao do sistema de
+ * auditoria de EPOs que o Filipe usou como referencia: o mapa preenche o retangulo
+ * inteiro, ha alternancia Ruas / Satelite no canto, os pinos sao circulos com um
+ * icone dentro e a lista das instalacoes fica na coluna da direita.
+ *
+ * O que veio de la e por que:
+ *   - `scrollWheelZoom: false`. Rolar a pagina por cima do mapa nao aproxima. Era
+ *     exatamente a reclamacao do Filipe na versao anterior, feita em SVG.
+ *   - controle de zoom proprio do Leaflet, no canto superior esquerdo.
+ *   - blocos de rua do OpenStreetMap e de satelite da Esri, os mesmos endereços.
+ *
+ * Consequencia a saber: os blocos vem da internet. O resto do prototipo funciona
+ * offline (estado em localStorage, arquivos em IndexedDB); o mapa, nao. Sem rede,
+ * aparecem os pinos sobre o fundo vazio do Leaflet.
+ *
+ * Antes daqui havia um contorno do Brasil desenhado em SVG, com as artes 3D dos
+ * estadios como marcadores. Saiu inteiro: as artes ficavam estranhas em tamanho
+ * pequeno e nunca pareciam do mesmo tamanho, por mais que se calibrasse.
  */
-const AREA_ALVO = 2600;
 
-// A arte de cada sede vem de sedes.js, nao do estado guardado: e dado de
-// apresentacao, e guardar no localStorage obrigaria a versionar o estado a cada
-// ajuste de desenho.
-const ARTE_POR_IMAGEM = new Map(SEDES.map((s) => [s.imagem, s.arte]));
+/** Diametro do pino, em pixels. */
+const LADO_PINO = 38;
 
-/** Largura e altura do marcador de uma sede, em % do lado do mapa. */
-function medirCartao(inst) {
-  const { proporcao = 1.25, escala = 1 } = ARTE_POR_IMAGEM.get(inst.imagem) || {};
-  return {
-    l: (Math.sqrt(AREA_ALVO * proporcao) * escala / MAPA_PX) * 100,
-    a: (Math.sqrt(AREA_ALVO / proporcao) * escala / MAPA_PX) * 100,
-  };
-}
+/** Enquadramento inicial: o Brasil inteiro. */
+const CENTRO_BRASIL = [-15.2, -49.5];
+const ZOOM_BRASIL = 4;
 
-// Caixa usada para afastar marcadores sobrepostos, em % do lado do mapa. E a maior
-// das caixas: separar pelo maior evita que o vizinho grande cubra o pequeno.
-const CARTAO = {
-  largura: (98 / MAPA_PX) * 100,
-  altura: (54 / MAPA_PX) * 100,
+const CAMADAS = {
+  ruas: {
+    rotulo: 'Ruas',
+    icone: MapaRuas,
+    url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    opcoes: { maxZoom: 18, attribution: '&copy; OpenStreetMap' },
+  },
+  satelite: {
+    rotulo: 'Satélite',
+    icone: Satellite,
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    opcoes: { maxZoom: 18, attribution: 'Imagens: Esri' },
+  },
 };
 
-const ZOOM_MIN = 1;
-const ZOOM_MAX = 6;
-const PASSO_ZOOM = 1.5;
+/**
+ * Pino de uma instalacao: circulo na cor da conformidade com o icone da tipologia.
+ *
+ * O icone e gerado como texto porque o Leaflet monta o marcador com HTML cru, fora
+ * da arvore do React. `renderToStaticMarkup` deixa reaproveitar o mesmo componente
+ * de icone que as listas usam, em vez de manter uma segunda copia dos desenhos.
+ */
+function iconeDoPino(inst, destacado) {
+  const cor = corDoProgresso(inst.percentual);
+  const Icone = iconeDaTipologia(inst.tipologia);
+  // Sem forcar cor: os icones usam currentColor, e `.pino-mapa` define branco.
+  const svg = renderToStaticMarkup(<Icone width={19} height={19} strokeWidth={2} />);
 
-/** Fundo do realce, o mesmo em toda a aplicacao: o azul do torneio bem diluido. */
-const REALCE = 'rgba(24,7,229,0.07)';
-
-const limitar = (v, min, max) => Math.min(max, Math.max(min, v));
-
-/** Converte '#RRGGBB' em rgba() - as cores de status do tema sao hexadecimais. */
-function comAlfa(hex, alfa) {
-  const n = parseInt(hex.slice(1), 16);
-  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alfa})`;
+  return L.divIcon({
+    className: '',
+    html:
+      `<div class="pino-mapa${destacado ? ' pino-destacado' : ''}" ` +
+      `style="background:${cor}">${svg}</div>`,
+    iconSize: [LADO_PINO, LADO_PINO],
+    iconAnchor: [LADO_PINO / 2, LADO_PINO / 2],
+    popupAnchor: [0, -LADO_PINO / 2 + 2],
+  });
 }
 
-/**
- * Marcador de um estadio. Cresce com o zoom, porque vive na camada transformada.
- *
- * Sem rotulo: quem nomeia os estadios e a lista ao lado do mapa. Assim o mapa fica
- * limpo e os nomes ficam legiveis sem depender do zoom.
- *
- * Sem nenhum enfeite: nem circulo do ponto exato, nem bolinha, nem barra de
- * progresso. Quem carrega a conformidade e o proprio estado pintado embaixo.
- */
-function PinEstadio({ inst, aoClicar, destacado, aoEntrar, aoSair }) {
-  const { l, a } = medirCartao(inst);
-
+/** Conteudo do balao. HTML cru: o Leaflet nao renderiza React aqui dentro. */
+function balaoDe(inst) {
+  const cor = corDoProgresso(inst.percentual);
+  const aproximada = inst.aproximada
+    ? '<p class="balao-obs">Posição aproximada: o endereço exato não está no cadastro.</p>'
+    : '';
   return (
-    <button
-      onClick={() => aoClicar(inst)}
-      onMouseEnter={() => aoEntrar(inst.id)}
-      onMouseLeave={aoSair}
-      className="absolute focus:outline-none"
-      style={{
-        left: `${inst.cx}%`,
-        top: `${inst.cy}%`,
-        width: `${l}%`,
-        height: `${a}%`,
-        transform: 'translate(-50%, -50%)',
-        zIndex: destacado ? 40 : 10,
-      }}
-      title={`${inst.nome} - ${inst.cidade} (${inst.percentual}%)`}
-    >
-      <div
-        className="relative w-full h-full transition-transform duration-150"
-        style={{ transformOrigin: 'center bottom', transform: destacado ? 'scale(1.3)' : 'none' }}
-      >
-        <img
-          src={comBase(inst.imagem)}
-          alt={inst.nome}
-          className="w-full h-full object-contain drop-shadow"
-          draggable={false}
-        />
-      </div>
-    </button>
+    `<p class="balao-nome">${inst.nome}</p>` +
+    `<p class="balao-local">${inst.cidade || 'Local não informado'}</p>` +
+    `<div class="balao-linha">` +
+      `<strong style="color:${cor}">${inst.percentual}%</strong>` +
+      `<span>${inst.anexados} de ${inst.total} documentos</span>` +
+    `</div>` +
+    aproximada +
+    `<button type="button" class="balao-botao" data-ir="${inst.id}">Ver documentação</button>`
   );
 }
 
@@ -113,13 +105,16 @@ function ItemLista({ inst, destacado, aoClicar, aoEntrar, aoSair }) {
       onClick={() => aoClicar(inst)}
       onMouseEnter={() => aoEntrar(inst.id)}
       onMouseLeave={aoSair}
-      className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors"
-      style={{
-        borderRadius: 10,
-        background: destacado ? REALCE : 'transparent',
-      }}
+      className="w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors rounded-[10px]"
+      style={{ background: destacado ? REALCE : 'transparent' }}
     >
-      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: cor }} />
+      {/* O icone repete o do pino: o mesmo tipo de instalacao, o mesmo desenho */}
+      <span
+        className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+        style={{ background: cor }}
+      >
+        <IconeTipologia tipologia={inst.tipologia} className="h-3.5 w-3.5 text-white" />
+      </span>
 
       <span className="min-w-0 flex-1">
         <span className="block text-[12px] font-medium text-slate-700 truncate">{inst.nome}</span>
@@ -137,140 +132,120 @@ function ItemLista({ inst, destacado, aoClicar, aoEntrar, aoSair }) {
   );
 }
 
-function BotaoZoom({ children, onClick, titulo, desabilitado }) {
-  return (
-    <button
-      onClick={onClick}
-      title={titulo}
-      disabled={desabilitado}
-      className="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-600 shadow-sm transition-colors hover:text-[#1807E5] hover:border-[#1807E5]/40 hover:bg-[#1807E5]/[0.07] disabled:opacity-40 disabled:hover:bg-white disabled:hover:text-slate-600 disabled:hover:border-slate-200"
-      style={{ borderRadius: 8 }}
-    >
-      {children}
-    </button>
-  );
-}
-
-/**
- * Mapa das cidades-sede: os estadios de competicao sobre o contorno do Brasil.
- *
- * A aproximacao e SO pelos botoes + e -. A roda do mouse chegou a dar zoom, mas
- * quem rolava a pagina passava por cima do mapa e aproximava sem querer - o mapa
- * "cortava" sozinho. Rolar agora rola a pagina, como em qualquer outra secao.
- * Aproximado, o mapa aceita arraste para navegar.
- *
- * Recebe o estado inteiro para calcular o progresso com o MESMO calculo da visao
- * gerencial, para os dois nunca divergirem.
- */
 export default function MapaSedes({ estado }) {
   const navigate = useNavigate();
   const [destacado, setDestacado] = useState(null);
-  const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [arrastando, setArrastando] = useState(false);
+  const [camada, setCamada] = useState('ruas');
 
-  const areaRef = useRef(null);
-  const arrasteRef = useRef(null);
+  const telaRef = useRef(null);
+  const mapaRef = useRef(null);
+  const camadaAtualRef = useRef(null);
+  const marcadoresRef = useRef(new Map());
 
-  const { estadios, outras, porUf } = useMemo(() => {
+  const { comCoordenada, estadios, outras } = useMemo(() => {
     const comProgresso = (i) => ({
       ...i,
       ...progresso(estado.documentos.filter((d) => d.instalacaoId === i.id)),
     });
 
-    const base = estado.instalacoes
-      .filter((i) => i.lat != null && i.lon != null)
-      .map((i) => {
-        const { x, y } = projetar(i.lat, i.lon);
-        return { ...comProgresso(i), x: paraPercentual(x), y: paraPercentual(y) };
-      });
-
-    const porId = new Map(desamontoar(base, CARTAO).map((p) => [p.id, p]));
-
-    const estadios = base.map((i) => ({ ...i, ...porId.get(i.id) }));
-
-    // A conformidade do estadio pinta o estado inteiro - e assim que o status
-    // aparece no mapa, sem nenhuma marca sobre o desenho.
-    const porUf = new Map(estadios.filter((i) => i.uf).map((i) => [i.uf, i]));
+    const todas = estado.instalacoes.map(comProgresso);
+    const porConformidade = (a, b) => a.percentual - b.percentual;
 
     return {
-      estadios,
-      porUf,
-      outras: estado.instalacoes
-        .filter((i) => i.lat == null || i.lon == null)
-        .map(comProgresso)
-        .sort((a, b) => a.percentual - b.percentual),
+      comCoordenada: todas.filter((i) => i.lat != null && i.lon != null),
+      // Pior conformidade primeiro: a lista serve para achar o problema, nao para
+      // enumerar instalacoes em ordem alfabetica.
+      estadios: todas.filter((i) => i.tipologia === 'estadio').sort(porConformidade),
+      outras: todas.filter((i) => i.tipologia !== 'estadio').sort(porConformidade),
     };
   }, [estado]);
 
-  /** Mantem o mapa preso as bordas da area visivel. */
-  function ajustarPan(prox, k) {
-    const el = areaRef.current;
-    if (!el) return prox;
-    const { width: L, height: A } = el.getBoundingClientRect();
-    const limiteX = Math.max(0, L * k - L);
-    const limiteY = Math.max(0, A * k - A);
-    return { x: limitar(prox.x, -limiteX, 0), y: limitar(prox.y, -limiteY, 0) };
-  }
+  // ── o mapa, criado uma vez ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!telaRef.current || mapaRef.current) return;
 
-  /** Zoom ancorado no centro da area - a origem e sempre um botao. */
-  function aplicarZoom(novoZoom) {
-    const el = areaRef.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
-    const k = limitar(novoZoom, ZOOM_MIN, ZOOM_MAX);
-    const ax = r.width / 2;
-    const ay = r.height / 2;
+    const mapa = L.map(telaRef.current, {
+      center: CENTRO_BRASIL,
+      zoom: ZOOM_BRASIL,
+      // A roda do mouse rola a pagina, nao aproxima o mapa. Zoom pelos botoes.
+      scrollWheelZoom: false,
+      zoomControl: true,
+      attributionControl: true,
+    });
+    mapaRef.current = mapa;
 
-    // Mantem no centro o mesmo ponto do mapa: pan' = a - (a - pan) * k'/k
-    setPan((atual) =>
-      ajustarPan(
-        { x: ax - ((ax - atual.x) * k) / zoom, y: ay - ((ay - atual.y) * k) / zoom },
-        k,
-      ),
-    );
-    setZoom(k);
-  }
+    // O balao e HTML cru, entao a navegacao do React Router entra por um ouvinte.
+    mapa.getContainer().addEventListener('click', (ev) => {
+      const alvo = ev.target.closest('[data-ir]');
+      if (alvo) navigate(`/instalacoes/${alvo.getAttribute('data-ir')}`);
+    });
 
-  function iniciarArraste(e) {
-    if (zoom === 1) return;
-    arrasteRef.current = { x: e.clientX, y: e.clientY, pan };
-    setArrastando(true);
-    e.currentTarget.setPointerCapture(e.pointerId);
-  }
+    return () => {
+      mapa.remove();
+      mapaRef.current = null;
+      marcadoresRef.current.clear();
+    };
+  }, [navigate]);
 
-  function moverArraste(e) {
-    const a = arrasteRef.current;
-    if (!a) return;
-    setPan(ajustarPan({ x: a.pan.x + (e.clientX - a.x), y: a.pan.y + (e.clientY - a.y) }, zoom));
-  }
+  // ── camada de fundo ───────────────────────────────────────────────────────
+  useEffect(() => {
+    const mapa = mapaRef.current;
+    if (!mapa) return;
 
-  function encerrarArraste() {
-    arrasteRef.current = null;
-    setArrastando(false);
-  }
+    if (camadaAtualRef.current) mapa.removeLayer(camadaAtualRef.current);
+    const { url, opcoes } = CAMADAS[camada];
+    camadaAtualRef.current = L.tileLayer(url, opcoes).addTo(mapa);
+    // Os blocos ficam sob os pinos, sempre.
+    camadaAtualRef.current.bringToBack();
+  }, [camada]);
 
-  function reiniciar() {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  }
+  // ── pinos ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    const mapa = mapaRef.current;
+    if (!mapa) return;
 
-  // Pior conformidade primeiro: a lista serve para achar o problema, nao para
-  // enumerar cidades em ordem alfabetica.
-  const porConformidade = useMemo(
-    () => [...estadios].sort((a, b) => a.percentual - b.percentual),
-    [estadios],
-  );
+    marcadoresRef.current.forEach((m) => m.remove());
+    marcadoresRef.current.clear();
+
+    comCoordenada.forEach((inst) => {
+      const marcador = L.marker([inst.lat, inst.lon], {
+        icon: iconeDoPino(inst, false),
+        title: `${inst.nome} - ${inst.percentual}%`,
+        riseOnHover: true,
+      })
+        .bindPopup(balaoDe(inst), { closeButton: true, minWidth: 210 })
+        .on('mouseover', () => setDestacado(inst.id))
+        .on('mouseout', () => setDestacado(null))
+        .addTo(mapa);
+
+      marcadoresRef.current.set(inst.id, marcador);
+    });
+
+    if (comCoordenada.length) {
+      mapa.fitBounds(comCoordenada.map((i) => [i.lat, i.lon]), {
+        padding: [44, 44],
+        maxZoom: 7,
+      });
+    }
+  }, [comCoordenada]);
+
+  // ── realce vindo da lista ─────────────────────────────────────────────────
+  useEffect(() => {
+    marcadoresRef.current.forEach((marcador, id) => {
+      const inst = comCoordenada.find((i) => i.id === id);
+      if (inst) marcador.setIcon(iconeDoPino(inst, id === destacado));
+    });
+  }, [destacado, comCoordenada]);
 
   const irPara = (i) => navigate(`/instalacoes/${i.id}`);
 
   return (
-    <section className="bg-white rounded-2xl border border-[#EFE7CE] shadow-sm overflow-hidden">
+    <section className={`${CLASSE_CARTAO} overflow-hidden`}>
       <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 flex-wrap">
         <div>
-          <h2 className="font-semibold text-slate-800">Cidades-sede e instalações</h2>
+          <h2 className="font-semibold text-slate-800">Instalações no Brasil</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            Use os botões + e - para aproximar. Clique em uma instalação para ver a documentação.
+            Cor do pino pela conformidade documental. Clique em uma instalação para ver os documentos.
           </p>
         </div>
         <div className="flex items-center gap-4 text-[11px] text-slate-500">
@@ -287,100 +262,41 @@ export default function MapaSedes({ estado }) {
         </div>
       </div>
 
-      {/* A largura da coluna do mapa vem da altura da janela (ver .grade-mapa, no
-          index.css) e a lista fica com a sobra: o mapa cabe na tela sem deixar
-          faixa vazia dos lados. */}
       <div className="grade-mapa">
-        <div className="relative px-6 py-6" style={{ background: 'linear-gradient(180deg, #FFFDF6 0%, #FFFBEB 100%)' }}>
-          <div className="absolute top-4 right-4 z-20 flex flex-col gap-1.5">
-            <BotaoZoom titulo="Aproximar" onClick={() => aplicarZoom(zoom * PASSO_ZOOM)} desabilitado={zoom >= ZOOM_MAX}>
-              <Plus className="h-4 w-4" />
-            </BotaoZoom>
-            <BotaoZoom titulo="Afastar" onClick={() => aplicarZoom(zoom / PASSO_ZOOM)} desabilitado={zoom <= ZOOM_MIN}>
-              <Minus className="h-4 w-4" />
-            </BotaoZoom>
-            <BotaoZoom titulo="Ver o Brasil inteiro" onClick={reiniciar} desabilitado={zoom === 1 && pan.x === 0 && pan.y === 0}>
-              <Maximize2 className="h-3.5 w-3.5" />
-            </BotaoZoom>
+        <div className="relative">
+          {/* Alternancia de fundo, no canto do mapa - acima dos controles do Leaflet */}
+          <div className="absolute top-3 right-3 z-[500] flex items-center gap-1 p-1 bg-white rounded-full border border-[#E2E8F0] shadow-sm">
+            {Object.entries(CAMADAS).map(([id, { rotulo, icone: Icone }]) => {
+              const ativo = camada === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => setCamada(id)}
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold rounded-full transition-colors"
+                  style={{
+                    background: ativo ? TEMA.azul : 'transparent',
+                    color: ativo ? '#FFFFFF' : TEMA.textoSuave,
+                  }}
+                  onMouseEnter={(e) => { if (!ativo) e.currentTarget.style.background = REALCE; }}
+                  onMouseLeave={(e) => { if (!ativo) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Icone className="h-3.5 w-3.5" />
+                  {rotulo}
+                </button>
+              );
+            })}
           </div>
 
-          {zoom > 1 && (
-            <span
-              className="absolute top-4 left-6 z-20 text-[10px] font-semibold px-2 py-1 bg-white border border-slate-200 text-slate-500 shadow-sm rounded-full"
-            >
-              {zoom.toFixed(1)}x
-            </span>
-          )}
-
-          <div
-            ref={areaRef}
-            onPointerDown={iniciarArraste}
-            onPointerMove={moverArraste}
-            onPointerUp={encerrarArraste}
-            onPointerCancel={encerrarArraste}
-            className="relative w-full overflow-hidden touch-none"
-            style={{
-              // Quadrado, ocupando a coluna inteira. Quem limita a altura e a
-              // largura da coluna, que sai da altura da janela.
-              aspectRatio: '1 / 1',
-              cursor: zoom === 1 ? 'default' : arrastando ? 'grabbing' : 'grab',
-            }}
-          >
-            {/* Camada transformada: mapa e marcadores crescem juntos */}
-            <div
-              className="absolute inset-0"
-              style={{
-                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-                transformOrigin: '0 0',
-                transition: arrastando ? 'none' : 'transform 160ms ease-out',
-              }}
-            >
-              <svg viewBox={VIEWBOX} className="absolute inset-0 w-full h-full">
-                {ESTADOS.map((e) => {
-                  const sede = porUf.get(e.sigla);
-                  const cor = sede ? corDoProgresso(sede.percentual) : null;
-                  const realcado = sede && destacado === sede.id;
-                  return (
-                    <path
-                      key={e.sigla}
-                      d={e.d}
-                      fill={cor ? comAlfa(cor, realcado ? 0.42 : 0.24) : 'rgba(9,27,63,0.06)'}
-                      stroke={cor || 'rgba(9,27,63,0.22)'}
-                      strokeWidth={cor ? (realcado ? 2.4 : 1.6) : 0.9}
-                      strokeLinejoin="round"
-                      vectorEffect="non-scaling-stroke"
-                      className="transition-[fill] duration-150"
-                    >
-                      <title>
-                        {sede ? `${e.nome} - ${sede.nome}: ${sede.percentual}%` : e.nome}
-                      </title>
-                    </path>
-                  );
-                })}
-              </svg>
-
-              {estadios.map((inst) => (
-                <PinEstadio
-                  key={inst.id}
-                  inst={inst}
-                  destacado={destacado === inst.id}
-                  aoEntrar={setDestacado}
-                  aoSair={() => setDestacado(null)}
-                  aoClicar={irPara}
-                />
-              ))}
-            </div>
-          </div>
+          <div ref={telaRef} className="tela-mapa" />
         </div>
 
-        {/* Lista lateral: TODAS as instalacoes, da menos a mais conforme. Fica aqui,
-            ao lado do mapa, em vez de repetida numa tabela abaixo dele. */}
-        <aside className="border-t lg:border-t-0 lg:border-l border-slate-100 p-3">
+        {/* Lista lateral: TODAS as instalacoes, da menos a mais conforme */}
+        <aside className="border-t lg:border-t-0 lg:border-l border-slate-100 p-3 overflow-y-auto">
           <p className="px-3 pt-1 pb-2 text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">
             Estádios de competição
           </p>
-          <div className="space-y-0.5 xl:grid xl:grid-cols-2 xl:gap-x-2 xl:space-y-0">
-            {porConformidade.map((inst) => (
+          <div className="space-y-0.5">
+            {estadios.map((inst) => (
               <ItemLista
                 key={inst.id}
                 inst={inst}
@@ -397,7 +313,7 @@ export default function MapaSedes({ estado }) {
               <p className="px-3 pt-4 pb-2 text-[10px] uppercase tracking-[0.16em] font-semibold text-slate-400">
                 Outras instalações
               </p>
-              <div className="space-y-0.5 xl:grid xl:grid-cols-2 xl:gap-x-2 xl:space-y-0">
+              <div className="space-y-0.5">
                 {outras.map((inst) => (
                   <ItemLista
                     key={inst.id}

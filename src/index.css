@@ -11,8 +11,10 @@
        (fonte proprietaria, nao distribuida) no site do torneio. */
     --font-inter: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
 
-    /* Apsis Brand — extraído de #1A4731, #F47920, #F4F6F4 */
-    --background:             120 10% 96%;   /* #F4F6F4 */
+    /* Apsis Brand - extraído de #1A4731, #F47920, #F4F6F4 */
+    /* O fundo da página é branco: o sistema inteiro assenta em branco, e são a
+       borda cinza e a sombra das caixas que separam um bloco do outro. */
+    --background:             0 0% 100%;     /* #FFFFFF */
     --foreground:             138 25% 14%;   /* #1A2B1F */
 
     --card:                   0 0% 100%;
@@ -42,7 +44,7 @@
 
     --radius: 0.5rem;
 
-    /* Sidebar — verde escuro Apsis */
+    /* Sidebar - verde escuro Apsis */
     --sidebar-background:             151 46% 19%;   /* #1A4731 */
     --sidebar-foreground:             0 0% 100%;
     --sidebar-primary:                25 91% 54%;    /* laranja no item ativo */
@@ -116,19 +118,109 @@
     overflow: hidden;
   }
 
-  /* Mapa das cidades-sede (MapaSedes).
-     O desenho e quadrado: solto na largura de uma tela grande, ele sozinho passava
-     de mil pixels de altura e empurrava os cartoes para fora da dobra. A coluna do
-     mapa e limitada pela ALTURA da janela, e a lista de instalacoes fica com a
-     sobra da largura - assim nao volta a faixa vazia dos lados. */
+  /* Mapa das instalações (MapaSedes), em Leaflet.
+     O mapa é um retângulo em paisagem que preenche a coluna inteira, e a lista de
+     instalações fica numa faixa fixa à direita. Não há mais o problema do desenho
+     quadrado, que sozinho passava de mil pixels de altura. */
   .grade-mapa {
     display: grid;
   }
 
+  .tela-mapa {
+    height: 420px;
+    width: 100%;
+    z-index: 0;              /* mantém os controles do Leaflet abaixo dos modais */
+    background: #F1F5F9;     /* enquanto os blocos do mapa não chegam */
+  }
+
   @media (min-width: 1024px) {
     .grade-mapa {
-      grid-template-columns: minmax(0, min(62vh, 58%)) 1fr;
+      grid-template-columns: 1fr 288px;
     }
+
+    .tela-mapa {
+      height: min(60vh, 560px);
+    }
+  }
+
+  /* Pino: círculo na cor da conformidade com o ícone da tipologia dentro.
+     O anel branco descola o pino do mapa, que tem cor e textura próprias. */
+  .pino-mapa {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 2.5px solid #FFFFFF;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.35);
+    transition: transform 140ms ease-out;
+    color: #FFFFFF;          /* os ícones dentro do pino usam currentColor */
+  }
+
+  .pino-destacado {
+    transform: scale(1.28);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.45);
+    z-index: 500;
+  }
+
+  /* Balão do pino: o Leaflet monta este HTML fora do React, então o estilo mora aqui */
+  .leaflet-popup-content-wrapper {
+    border-radius: 12px;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
+  }
+
+  .leaflet-popup-content {
+    margin: 12px 14px;
+    font-family: 'Poppins', 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  .balao-nome {
+    font-weight: 600;
+    font-size: 13px;
+    color: #0F172A;
+  }
+
+  .balao-local {
+    font-size: 11px;
+    color: #94A3B8;
+    margin-top: 1px;
+  }
+
+  .balao-linha {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 11px;
+    color: #64748B;
+  }
+
+  .balao-linha strong {
+    font-size: 15px;
+  }
+
+  .balao-obs {
+    font-size: 10px;
+    color: #94A3B8;
+    margin-top: 6px;
+    line-height: 1.35;
+  }
+
+  .balao-botao {
+    margin-top: 10px;
+    width: 100%;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: #1807E5;
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .balao-botao:hover {
+    background: #1205B4;
   }
 
   @media (min-width: 1024px) {

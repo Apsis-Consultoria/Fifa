@@ -4,7 +4,10 @@ import { Plus, ArrowRight, Trash2, X, LayoutGrid, List } from 'lucide-react';
 import { toast } from 'sonner';
 import { useEstado, progresso, criarInstalacao, removerInstalacao } from '@/lib/store';
 import { TIPOLOGIAS, catalogoPorTipologia } from '@/lib/catalogo';
-import { TEMA, FONTE, RAIO_PILULA, corDoProgresso } from '@/lib/tema';
+import {
+  TEMA, FONTE, corDoProgresso, REALCE,
+  CLASSE_CARTAO, CLASSE_CARTAO_CLICAVEL, BOTAO_PRIMARIO,
+} from '@/lib/tema';
 
 const CIDADES_SEDE = [
   'Rio de Janeiro', 'São Paulo', 'Porto Alegre', 'Belo Horizonte',
@@ -17,9 +20,6 @@ const CAMPO =
   'focus:ring-2 focus:ring-[#1807E5]/20';
 
 const rotuloTipologia = (id) => TIPOLOGIAS.find((t) => t.id === id)?.label || id;
-
-/** Fundo do realce ao passar o mouse: o azul do torneio bem diluido. */
-const REALCE = 'rgba(24,7,229,0.07)';
 
 /** A escolha entre grade e lista acompanha o usuario entre as visitas. */
 const CHAVE_VISUAL = 'fifa27_visual_instalacoes';
@@ -43,7 +43,7 @@ function FormularioNovaInstalacao({ aoFechar }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
         <div className="flex items-start justify-between px-6 py-5 border-b border-slate-100">
           <div>
             <h2 className="font-bold text-slate-800 text-lg" style={{ fontFamily: FONTE }}>
@@ -105,7 +105,7 @@ function FormularioNovaInstalacao({ aoFechar }) {
             </div>
           </div>
 
-          <div className="rounded-lg px-4 py-3" style={{ background: 'rgba(24,7,229,0.06)', border: '1px solid rgba(24,7,229,0.18)' }}>
+          <div className="rounded-lg px-4 py-3" style={{ background: REALCE, border: '1px solid rgba(24,7,229,0.18)' }}>
             <p className="text-xs" style={{ color: TEMA.azul }}>
               Serão criados <strong>{exigidos} documentos</strong> exigidos para
               {' '}{rotuloTipologia(tipologia).toLowerCase()}, conforme o Anexo 2 da RFI 39.
@@ -123,8 +123,8 @@ function FormularioNovaInstalacao({ aoFechar }) {
             <button
               type="submit"
               disabled={!nome.trim()}
-              className="px-5 py-2.5 rounded-lg text-sm font-bold disabled:opacity-40 transition-opacity hover:opacity-90"
-              style={{ background: TEMA.amarelo, color: TEMA.azul, borderRadius: RAIO_PILULA }}
+              className="px-5 py-2.5 text-sm font-bold disabled:opacity-40 transition-opacity hover:opacity-90"
+              style={BOTAO_PRIMARIO}
             >
               Criar instalação
             </button>
@@ -143,7 +143,7 @@ function SeletorVisual({ visual, aoTrocar }) {
   ];
 
   return (
-    <div className="flex items-center gap-1 p-1 bg-white border border-[#EFE7CE] rounded-full">
+    <div className="flex items-center gap-1 p-1 bg-white border border-[#E2E8F0] rounded-full">
       {OPCOES.map(({ id, icone: Icone, rotulo }) => {
         const ativo = visual === id;
         return (
@@ -154,7 +154,7 @@ function SeletorVisual({ visual, aoTrocar }) {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-colors rounded-full"
             style={{
               background: ativo ? TEMA.azul : 'transparent',
-              color: ativo ? '#FFFFFF' : '#64748B',
+              color: ativo ? TEMA.branco : TEMA.textoSuave,
             }}
             onMouseEnter={(e) => { if (!ativo) e.currentTarget.style.background = REALCE; }}
             onMouseLeave={(e) => { if (!ativo) e.currentTarget.style.background = 'transparent'; }}
@@ -246,7 +246,7 @@ export default function Instalacoes() {
         <p className="text-slate-500 mt-1.5 text-sm">
           Estádios, centros de treinamento, IBC e demais instalações do torneio.
         </p>
-        <div className="mt-4 h-[4px] w-28 rounded-full" style={{ background: TEMA.amarelo }} />
+        <div className="mt-4 h-[4px] w-28 rounded-full" style={{ background: TEMA.azul }} />
       </header>
 
       {/* Barra de acoes colada na lista: o botao de criar fica junto do conteudo
@@ -261,7 +261,7 @@ export default function Instalacoes() {
         <button
           onClick={() => setCriando(true)}
           className="flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-opacity hover:opacity-90 flex-shrink-0"
-          style={{ background: TEMA.amarelo, color: TEMA.azul, borderRadius: RAIO_PILULA }}
+          style={BOTAO_PRIMARIO}
         >
           <Plus className="h-4 w-4" />
           Nova instalação
@@ -269,7 +269,7 @@ export default function Instalacoes() {
       </div>
 
       {visual === 'lista' && lista.length > 0 && (
-        <div className="bg-white rounded-2xl border border-[#EFE7CE] shadow-sm overflow-hidden divide-y divide-slate-100">
+        <div className={`${CLASSE_CARTAO} overflow-hidden divide-y divide-slate-100`}>
           {lista.map((inst) => (
             <LinhaInstalacao key={inst.id} inst={inst} aoAbrir={abrir} aoExcluir={excluir} />
           ))}
@@ -282,7 +282,9 @@ export default function Instalacoes() {
           <div
             key={inst.id}
             onClick={() => abrir(inst)}
-            className="bg-white rounded-2xl border border-[#EFE7CE] p-5 shadow-sm hover:shadow-md hover:border-[#1807E5]/40 hover:bg-[#1807E5]/[0.05] transition-all cursor-pointer group"
+            className={`${CLASSE_CARTAO_CLICAVEL} p-5 group`}
+            onMouseEnter={(e) => { e.currentTarget.style.background = REALCE; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
@@ -338,8 +340,8 @@ export default function Instalacoes() {
           <p className="text-sm text-slate-500">Nenhuma instalação cadastrada.</p>
           <button
             onClick={() => setCriando(true)}
-            className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-opacity hover:opacity-90"
-            style={{ background: TEMA.amarelo, color: TEMA.azul, borderRadius: RAIO_PILULA }}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
+            style={BOTAO_PRIMARIO}
           >
             <Plus className="h-4 w-4" />
             Criar a primeira

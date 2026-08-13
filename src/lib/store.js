@@ -17,7 +17,7 @@ import { SEDES } from './sedes';
 
 // Versione a chave ao mudar o formato do estado ou o catalogo: navegadores que ja
 // tenham a versao antiga em localStorage recebem o seed novo em vez de dados velhos.
-const CHAVE = 'fifa27_estado_v6';
+const CHAVE = 'fifa27_estado_v7';
 
 // Quantos documentos de cada estadio ja estao entregues no seed. A chave e o id da
 // sede em sedes.js - assim o mapa e a lista falam da mesma instalacao.
@@ -35,8 +35,13 @@ const ENTREGUES_POR_SEDE = {
 // Instalacoes de demonstracao. Declaradas antes do estado porque `carregar()` roda
 // na inicializacao do modulo e chama `seed()`, que depende desta lista.
 //
-// Os 8 estadios vem de SEDES, para que carreguem lat/lon e imagem e apareçam no
-// mapa. As demais instalacoes nao tem coordenada e so aparecem nas listas.
+// Os 8 estadios vem de SEDES, com as coordenadas reais dos estadios.
+//
+// As demais instalacoes tambem entram no mapa, com COORDENADA APROXIMADA: sao
+// pontos plausiveis no Rio (Riocentro, Parque Olimpico, Copacabana, Maracana), nao
+// enderecos confirmados pela FIFA. Num sistema de verdade a coordenada vem do
+// cadastro da instalacao; aqui ela existe para o mapa mostrar o portfolio inteiro,
+// e nao so os estadios.
 const INSTALACOES_DEMO = [
   ...SEDES.map((s) => ({
     sedeId: s.id,
@@ -50,11 +55,11 @@ const INSTALACOES_DEMO = [
     responsavel: 'Venue Authority',
     entregues: ENTREGUES_POR_SEDE[s.id] ?? 0,
   })),
-  { nome: 'IBC - Rio de Janeiro',      tipologia: 'ibc',                cidade: 'Rio de Janeiro', responsavel: 'FIFA27',           entregues: 12 },
-  { nome: 'CT da Arbitragem',          tipologia: 'centro_treinamento', cidade: 'Rio de Janeiro', responsavel: 'FIFA27',           entregues: 14 },
-  { nome: 'CT Barra da Tijuca',        tipologia: 'centro_treinamento', cidade: 'Rio de Janeiro', responsavel: 'Operador do CT',   entregues: 4  },
-  { nome: 'Comercial Display - Praia de Copacabana', tipologia: 'comercial_display', cidade: 'Rio de Janeiro', responsavel: 'Fornecedor de overlay', entregues: 9 },
-  { nome: 'Cerimônia de Abertura - Queima de Fogos', tipologia: 'queima_fogos', cidade: 'Rio de Janeiro', responsavel: 'FIFA27',   entregues: 2  },
+  { nome: 'IBC - Rio de Janeiro',      tipologia: 'ibc',                cidade: 'Rio de Janeiro', uf: 'RJ', lat: -22.9770, lon: -43.4088, aproximada: true, responsavel: 'FIFA27',           entregues: 12 },
+  { nome: 'CT da Arbitragem',          tipologia: 'centro_treinamento', cidade: 'Rio de Janeiro', uf: 'RJ', lat: -22.9762, lon: -43.3925, aproximada: true, responsavel: 'FIFA27',           entregues: 14 },
+  { nome: 'CT Barra da Tijuca',        tipologia: 'centro_treinamento', cidade: 'Rio de Janeiro', uf: 'RJ', lat: -22.9994, lon: -43.3658, aproximada: true, responsavel: 'Operador do CT',   entregues: 4  },
+  { nome: 'Comercial Display - Praia de Copacabana', tipologia: 'comercial_display', cidade: 'Rio de Janeiro', uf: 'RJ', lat: -22.9711, lon: -43.1822, aproximada: true, responsavel: 'Fornecedor de overlay', entregues: 9 },
+  { nome: 'Cerimônia de Abertura - Queima de Fogos', tipologia: 'queima_fogos', cidade: 'Rio de Janeiro', uf: 'RJ', lat: -22.9060, lon: -43.2210, aproximada: true, responsavel: 'FIFA27',   entregues: 2  },
 ];
 
 let estado = carregar();
@@ -271,7 +276,10 @@ function seed() {
       responsavel: base.responsavel,
       criadoEm: new Date().toISOString(),
       // Presentes so nos estadios: alimentam o mapa da tela inicial.
-      ...(base.lat != null && { uf: base.uf, lat: base.lat, lon: base.lon, imagem: base.imagem }),
+      ...(base.lat != null && {
+          uf: base.uf, lat: base.lat, lon: base.lon,
+          imagem: base.imagem, aproximada: base.aproximada,
+        }),
     };
     instalacoes.push(instalacao);
 

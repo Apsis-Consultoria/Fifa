@@ -12,7 +12,9 @@ import {
 import { TIPOLOGIAS } from '@/lib/catalogo';
 import { baixarArquivo, formatarTamanho } from '@/lib/files';
 import Donut from '@/components/Donut';
-import { TEMA, FONTE, RAIO_PILULA } from '@/lib/tema';
+import {
+  TEMA, FONTE, RAIO_PILULA, CLASSE_CARTAO, REALCE, REALCE_FORTE, BOTAO_PRIMARIO,
+} from '@/lib/tema';
 
 const CAMPO =
   'w-full px-3.5 py-2.5 rounded-lg bg-white border border-slate-200 text-sm text-slate-700 ' +
@@ -51,6 +53,9 @@ function LinhaDocumento({ doc, aoAnexar, aoRemoverAnexo, aoExcluir }) {
 
   const anexado = !!doc.arquivo;
 
+  // O arquivo sobre a linha e um estado de acao, nao de status: fica no azul do
+  // torneio, um degrau acima do hover para o alvo se distinguir. O fundo inline
+  // vence o hover enquanto o arquivo esta sobre a linha.
   return (
     <div
       onDragOver={(e) => { e.preventDefault(); if (!anexado) setArrastando(true); }}
@@ -60,10 +65,11 @@ function LinhaDocumento({ doc, aoAnexar, aoRemoverAnexo, aoExcluir }) {
         setArrastando(false);
         if (!anexado) receber(e.dataTransfer.files?.[0]);
       }}
-      className={`px-5 py-3.5 flex items-center gap-4 transition-colors ${
-        arrastando ? 'ring-2 ring-inset' : 'hover:bg-[#1807E5]/[0.05]'
-      }`}
-      style={arrastando ? { background: 'rgba(255,208,51,0.18)', boxShadow: `inset 0 0 0 2px ${TEMA.amarelo}` } : undefined}
+      className="px-5 py-3.5 flex items-center gap-4 transition-colors hover:bg-[var(--realce)]"
+      style={{
+        '--realce': REALCE,
+        ...(arrastando && { background: REALCE_FORTE, boxShadow: `inset 0 0 0 2px ${TEMA.azul}` }),
+      }}
     >
       {anexado
         ? <CheckCircle2 className="h-5 w-5 flex-shrink-0" style={{ color: TEMA.verde }} />
@@ -75,7 +81,8 @@ function LinhaDocumento({ doc, aoAnexar, aoRemoverAnexo, aoExcluir }) {
         </p>
         <div className="flex items-center gap-2 mt-0.5 flex-wrap">
           {doc.obs && (
-            <span className="text-[11px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100">
+            // Observacao do documento e informacao, nao status: vai no azul diluido.
+            <span className="text-[11px] px-1.5 py-0.5 rounded" style={{ background: REALCE_FORTE, color: TEMA.azul }}>
               {doc.obs}
             </span>
           )}
@@ -97,7 +104,7 @@ function LinhaDocumento({ doc, aoAnexar, aoRemoverAnexo, aoExcluir }) {
       <div className="flex items-center gap-1 flex-shrink-0">
         {anexado ? (
           <>
-            <button onClick={baixar} title="Baixar" className="p-2 rounded-lg text-slate-400 hover:text-[#1807E5] hover:bg-[#1807E5]/[0.07] transition-colors">
+            <button onClick={baixar} title="Baixar" className="p-2 rounded-lg text-slate-400 hover:text-[#1807E5] hover:bg-[var(--realce)] transition-colors">
               <Download className="h-4 w-4" />
             </button>
             <button onClick={() => aoRemoverAnexo(doc.id)} title="Remover anexo" className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors">
@@ -109,7 +116,7 @@ function LinhaDocumento({ doc, aoAnexar, aoRemoverAnexo, aoExcluir }) {
             onClick={() => inputRef.current?.click()}
             disabled={enviando}
             className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold disabled:opacity-50 transition-opacity hover:opacity-80"
-            style={{ background: TEMA.amarelo, color: TEMA.azul, borderRadius: RAIO_PILULA }}
+            style={BOTAO_PRIMARIO}
           >
             <Upload className="h-3.5 w-3.5" />
             {enviando ? 'Enviando...' : 'Anexar'}
@@ -147,7 +154,7 @@ function FormularioNovoDocumento({ instalacaoId, aoFechar }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden">
         <div className="flex items-start justify-between px-6 py-5 border-b border-slate-100">
           <div>
             <h2 className="font-bold text-slate-800 text-lg" style={{ fontFamily: FONTE }}>
@@ -193,7 +200,7 @@ function FormularioNovoDocumento({ instalacaoId, aoFechar }) {
               type="submit"
               disabled={!nome.trim()}
               className="px-5 py-2.5 text-sm font-semibold disabled:opacity-40 transition-opacity hover:opacity-90"
-              style={{ background: TEMA.amarelo, color: TEMA.azul, borderRadius: RAIO_PILULA }}
+              style={BOTAO_PRIMARIO}
             >
               Criar solicitação
             </button>
@@ -242,22 +249,24 @@ export default function InstalacaoDetalhe() {
   ];
 
   return (
-    <div className="p-6 lg:p-10 max-w-[1400px]">
+    // A variavel guarda o REALCE para os hovers do Tailwind desta tela usarem a
+    // mesma constante do tema em vez de repetirem o rgba.
+    <div className="p-6 lg:p-10 max-w-[1400px]" style={{ '--realce': REALCE }}>
       <button
         onClick={() => navigate('/instalacoes')}
-        className="inline-flex items-center gap-1.5 text-sm text-slate-500 px-3 py-1.5 -ml-3 rounded-full transition-colors hover:text-[#1807E5] hover:bg-[#1807E5]/[0.07] mb-5"
+        className="inline-flex items-center gap-1.5 text-sm text-slate-500 px-3 py-1.5 -ml-3 rounded-full transition-colors hover:text-[#1807E5] hover:bg-[var(--realce)] mb-5"
       >
         <ArrowLeft className="h-4 w-4" />
         Instalações
       </button>
 
-      <header className="bg-white rounded-2xl border border-[#EFE7CE] shadow-sm p-6 mb-6 flex flex-col md:flex-row md:items-center gap-6">
+      <header className={`${CLASSE_CARTAO} p-6 mb-6 flex flex-col md:flex-row md:items-center gap-6`}>
         <div className="flex-1 min-w-0">
           <h1 className="text-2xl font-bold" style={{ fontFamily: FONTE, color: TEMA.azulMarinho }}>
             {instalacao.nome}
           </h1>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <span className="text-[11px] px-2.5 py-1 font-medium" style={{ background: 'rgba(24,7,229,0.08)', color: TEMA.azul, borderRadius: RAIO_PILULA }}>
+            <span className="text-[11px] px-2.5 py-1 font-medium" style={{ background: REALCE_FORTE, color: TEMA.azul, borderRadius: RAIO_PILULA }}>
               {rotuloTipologia(instalacao.tipologia)}
             </span>
             {instalacao.cidade && (
@@ -294,7 +303,7 @@ export default function InstalacaoDetalhe() {
         />
       </header>
 
-      <div className="bg-white rounded-2xl border border-[#EFE7CE] shadow-sm overflow-hidden">
+      <div className={`${CLASSE_CARTAO} overflow-hidden`}>
         <div className="px-5 py-4 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center gap-3">
           <div className="flex gap-1 flex-shrink-0">
             {ABAS.map((aba) => (
@@ -302,12 +311,12 @@ export default function InstalacaoDetalhe() {
                 key={aba.id}
                 onClick={() => setFiltro(aba.id)}
                 className={`px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                  filtro === aba.id ? 'font-semibold' : 'text-slate-500 hover:bg-[#1807E5]/[0.07] hover:text-[#1807E5]'
+                  filtro === aba.id ? 'font-semibold' : 'text-slate-500 hover:bg-[var(--realce)] hover:text-[#1807E5]'
                 }`}
                 style={{
                   borderRadius: RAIO_PILULA,
                   background: filtro === aba.id ? TEMA.azul : undefined,
-                  color: filtro === aba.id ? '#FFFFFF' : undefined,
+                  color: filtro === aba.id ? TEMA.branco : undefined,
                 }}
               >
                 {aba.label}
@@ -328,7 +337,7 @@ export default function InstalacaoDetalhe() {
           <button
             onClick={() => setCriando(true)}
             className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold flex-shrink-0 transition-opacity hover:opacity-90"
-            style={{ background: TEMA.amarelo, color: TEMA.azul, borderRadius: RAIO_PILULA }}
+            style={BOTAO_PRIMARIO}
           >
             <Plus className="h-4 w-4" />
             Nova solicitação
@@ -336,7 +345,7 @@ export default function InstalacaoDetalhe() {
         </div>
 
         <div className="px-5 py-2.5 bg-slate-50/70 border-b border-slate-100 flex items-center gap-2 text-[11px] text-slate-400">
-          <FileText className="h-3.5 w-3.5" />
+          <FileText className="h-3.5 w-3.5" style={{ color: TEMA.azul }} />
           Arraste um arquivo sobre a linha do documento para anexar.
         </div>
 

@@ -7,7 +7,9 @@ import { useEstado, progresso } from '@/lib/store';
 import { TIPOLOGIAS } from '@/lib/catalogo';
 import Donut from '@/components/Donut';
 import MapaSedes from '@/components/MapaSedes';
-import { TEMA, FONTE, corDoProgresso } from '@/lib/tema';
+import {
+  TEMA, FONTE, corDoProgresso, CLASSE_CARTAO, CLASSE_CARTAO_CLICAVEL, REALCE, REALCE_FORTE,
+} from '@/lib/tema';
 
 const rotuloTipologia = (id) => TIPOLOGIAS.find((t) => t.id === id)?.label || id;
 
@@ -15,7 +17,7 @@ const DIA = 86_400_000;
 
 function Indicador({ icone: Icone, titulo, valor, detalhe, cor }) {
   return (
-    <div className="bg-white rounded-2xl border border-[#EFE7CE] px-4 py-3 shadow-sm">
+    <div className={`${CLASSE_CARTAO} px-4 py-3`}>
       <div className="flex items-center gap-2 text-slate-500 text-[10px] font-medium uppercase tracking-wide">
         <Icone className="h-3.5 w-3.5 flex-shrink-0" style={{ color: cor }} />
         <span className="truncate">{titulo}</span>
@@ -30,7 +32,7 @@ function Indicador({ icone: Icone, titulo, valor, detalhe, cor }) {
 
 function Cartao({ titulo, descricao, children }) {
   return (
-    <section className="bg-white rounded-2xl border border-[#EFE7CE] shadow-sm px-5 py-4">
+    <section className={`${CLASSE_CARTAO} px-5 py-4`}>
       <h2 className="text-[13px] font-semibold text-slate-700">{titulo}</h2>
       {descricao && <p className="text-[11px] text-slate-400 mt-0.5 leading-snug">{descricao}</p>}
       <div className="mt-3">{children}</div>
@@ -163,7 +165,7 @@ export default function Dashboard() {
         <p className="text-slate-500 mt-1 text-[13px]">
           Conformidade documental por instalação, consolidada a partir dos anexos entregues.
         </p>
-        <div className="mt-3 h-[4px] w-24 rounded-full" style={{ background: TEMA.amarelo }} />
+        <div className="mt-3 h-[4px] w-24 rounded-full" style={{ background: TEMA.azul }} />
       </header>
 
       <section className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 mb-5">
@@ -178,7 +180,7 @@ export default function Dashboard() {
       {/* Tres cartoes acima do mapa e tres abaixo, sempre em tres colunas: assim
           cada faixa cabe inteira na tela, sem rolagem para ver um cartao. */}
       <div className="grid gap-4 lg:grid-cols-3 mb-5">
-        <section className="bg-white rounded-2xl border border-[#EFE7CE] shadow-sm px-5 py-4 flex flex-col items-center justify-center gap-4">
+        <section className={`${CLASSE_CARTAO} px-5 py-4 flex flex-col items-center justify-center gap-4`}>
           <Donut
             tamanho={128}
             espessura={19}
@@ -252,9 +254,13 @@ export default function Dashboard() {
       </div>
 
       {criticas.length > 0 && (
+        // O realce vai por evento, e nao por classe, para usar a constante REALCE do
+        // tema em vez de repetir o azul diluido aqui.
         <button
           onClick={() => navigate(`/instalacoes/${criticas[0].id}`)}
-          className="mb-5 w-full bg-white rounded-2xl border border-[#EFE7CE] shadow-sm px-5 py-3 flex items-center gap-4 text-left transition-colors hover:bg-[#1807E5]/[0.05]"
+          onMouseEnter={(e) => { e.currentTarget.style.background = REALCE; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = ''; }}
+          className={`${CLASSE_CARTAO_CLICAVEL} mb-5 w-full px-5 py-3 flex items-center gap-4 text-left`}
         >
           <AlertTriangle className="h-5 w-5 flex-shrink-0" style={{ color: TEMA.critico }} />
           <span className="min-w-0 flex-1">
@@ -306,7 +312,7 @@ export default function Dashboard() {
                 </span>
                 <span
                   className="text-[11px] font-semibold tabular-nums flex-shrink-0 px-2.5 py-1 rounded-full"
-                  style={{ background: 'rgba(24,7,229,0.07)', color: TEMA.azul }}
+                  style={{ background: REALCE_FORTE, color: TEMA.azul }}
                 >
                   {g.instalacoes} instalaç{g.instalacoes > 1 ? 'ões' : 'ão'}
                 </span>

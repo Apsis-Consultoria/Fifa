@@ -1,50 +1,37 @@
-import { useState, useEffect } from 'react';
-import { TEMA, FONTE, EMBLEMA_PAINEL } from '@/lib/tema';
+import { TEMA, FONTE, MARCA, LOGOTIPO_BRANCO } from '@/lib/tema';
 import { comBase } from '@/lib/assets';
 
 /**
  * Layout de login no padrao do portal APSIS, na identidade da Copa.
  *
- * Esquerda: fundo corporativo (slideshow com crossfade) + overlays + headline.
- * Direita: painel claro com borda esquerda curva (clip-path), emblema do torneio e
- *   a area de login (children). No mobile, empilha.
+ * Esquerda: a arte oficial do torneio, com o logotipo no canto superior.
+ * Direita: painel BRANCO com borda esquerda curva (clip-path), a marca do torneio
+ *   sem letreiro e a area de login (children). No mobile, empilha.
  *
  * Proporcoes IDENTICAS as do portal-apsis: grid 64%/36%, painel w-[37%] com
- * ellipse(85% 160% at 93% 50%), logo 235px a 9vh do topo e bloco de login com gap
- * de 11vh. O que muda em relacao ao portal e so a paleta: o verde da APSIS vira o
- * azul do torneio e a linha laranja vira o amarelo.
+ * ellipse(85% 160% at 93% 50%), e a linha amarela acompanhando a curva.
  *
  * A logica de autenticacao NAO vive aqui - os forms entram como children.
  *
- * ── IMAGENS DE FUNDO ──────────────────────────────────────────────────────────
- * Coloque os arquivos em `public/login-copa/` e liste-os em BACKGROUNDS abaixo.
- * Com a lista vazia, o fundo cai no grafismo em SVG (geometria de campo + losango
- * da bandeira) - nada quebra e a tela segue apresentavel.
+ * ── A ARTE DE FUNDO ──────────────────────────────────────────────────────────
+ * Uma imagem so, fixa. Antes eram cinco fotos em revezamento; o Filipe pediu
+ * estatica.
  *
- * As fotos NAO ocupam a largura inteira: param em LARGURA_FOTO (76%), pouco depois
- * de onde o painel de login comeca a cobrir a tela (a elipse chega a 66%). Esse
- * detalhe e o que faz o enquadramento funcionar - com a foto esticada de ponta a
- * ponta, o recorte do `object-fit: cover` sobra quase nada na horizontal e o
- * `object-position` deixa de ter efeito. Numa caixa mais estreita sobra recorte de
- * verdade, e ai da para escolher QUAL parte da foto aparece.
+ * A faixa da foto para em 76% da largura (ver `.faixa-fotos` no index.css), pouco
+ * depois de onde o painel comeca a cobrir (a elipse chega a 66%). Sem essa folga,
+ * o recorte do `object-fit: cover` nao sobra quase nada na horizontal e a arte -
+ * que tem a taca e o letreiro no centro - ficaria com metade escondida atras do
+ * painel. Com a faixa, o centro da imagem cai a ~38% da tela, bem a esquerda dele.
  *
- * `posicao` e esse object-position horizontal: 0% mostra a borda esquerda da foto,
- * 100% a direita. Como o painel cobre o lado direito da tela, as fotos com o motivo
- * mais a direita (a jogadora de vermelho em 57% da largura, o trofeu em 53%) pedem
- * valores MENORES, que puxam o recorte para o inicio da foto e trazem o motivo para
- * o meio da area visivel. Os valores abaixo foram medidos foto a foto.
+ * Nao ha mais texto sobre a foto: o titulo do sistema foi para o painel branco.
+ * Por isso os gradientes de escurecimento sao leves - eles existiam para dar
+ * contraste ao texto, e agora so assentam a arte.
  */
 
-// A largura da faixa (76%) e a mascara da emenda estao em `.faixa-fotos`,
-// no index.css, porque so valem no desktop - no mobile a foto ocupa tudo.
-
-export const BACKGROUNDS = [
-  { src: '/login-copa/FPLS_WWC_MOMENTS_HP_Slider_WebApp_BG_01.avif', posicao: '54%' },
-  { src: '/login-copa/Germany-v-Colombia-Group-H-FIFA-Women-s-World-Cup-Australia-New-Zealand-2023.avif', posicao: '0%' },
-  { src: '/login-copa/26HHAK.avif', posicao: '20%' },
-  { src: '/login-copa/107821572.avif', posicao: '0%' },
-  { src: '/login-copa/74th-FIFA-Congress-FIFA-Council-Meeting.avif', posicao: '40%' },
-];
+// 2465x1536 em WebP (140 KB): a primeira versao tinha 826x465 e chegava esticada a
+// mais de 1900px de largura na tela, visivelmente pixelada. O original sem perda
+// esta em assets-fonte/hero-fwwc2027.png.
+export const FOTO = '/login-copa/hero-fwwc2027.webp';
 
 /** Grafismo do torneio - base sob as fotos, e fundo inteiro enquanto nao houver fotos. */
 function FundoGrafico() {
@@ -88,21 +75,10 @@ function FundoGrafico() {
 
 export default function CopaLoginLayout({
   children,
-  backgrounds = BACKGROUNDS,
-  headline = 'Gestão Regulatória e Licenciamento de Instalações',
+  foto = FOTO,
   subheadline = 'Copa do Mundo Feminina da FIFA Brasil 2027',
   copyright = '© 2026 APSIS Consultoria. Todos os direitos reservados.',
 }) {
-  const imgs = backgrounds && backgrounds.length ? backgrounds : [];
-  const [idx, setIdx] = useState(0);
-
-  // Slideshow com crossfade - so ativa com 2+ imagens
-  useEffect(() => {
-    if (imgs.length < 2) return;
-    const t = setInterval(() => setIdx((i) => (i + 1) % imgs.length), 6500);
-    return () => clearInterval(t);
-  }, [imgs.length]);
-
   return (
     <div
       className="relative min-h-screen overflow-hidden"
@@ -111,33 +87,27 @@ export default function CopaLoginLayout({
       {/* Base: grafismo sempre presente */}
       <FundoGrafico />
 
-      {/* Fotos: camadas empilhadas com crossfade por opacidade.
-          A caixa para antes da borda direita (ver LARGURA_FOTO) e a mascara desfaz
-          a emenda com o grafismo, que fica atras do painel de login. */}
+      {/* A arte do torneio, fixa. A mascara em `.faixa-fotos` desfaz a emenda com
+          o grafismo, que fica escondida atras do painel. */}
       <div className="faixa-fotos">
-        {imgs.map((foto, i) => (
-          <img
-            key={foto.src}
-            src={comBase(foto.src)}
-            alt=""
-            aria-hidden="true"
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-            style={{ objectPosition: `${foto.posicao || '50%'} center` }}
-            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-[1500ms] ease-in-out ${
-              i === idx ? 'opacity-100' : 'opacity-0'
-            }`}
-          />
-        ))}
+        <img
+          src={comBase(foto)}
+          alt=""
+          aria-hidden="true"
+          onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: 'center center' }}
+        />
       </div>
 
-      {/* Overlays p/ legibilidade do texto a esquerda - nao encostam no painel */}
+      {/* Assentam a arte sem apagar a taca - nao ha mais texto sobre a foto */}
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(to right, rgba(9,27,63,.93), rgba(9,27,63,.58) 45%, rgba(9,27,63,0) 72%)' }}
+        style={{ background: 'linear-gradient(to right, rgba(9,27,63,.45), rgba(9,27,63,.12) 45%, rgba(9,27,63,0) 72%)' }}
       />
       <div
         className="absolute inset-0"
-        style={{ background: 'linear-gradient(to top, rgba(9,27,63,.86), rgba(9,27,63,.25), transparent)' }}
+        style={{ background: 'linear-gradient(to top, rgba(9,27,63,.55), rgba(9,27,63,.10), transparent)' }}
       />
 
       {/* Painel claro recortado pela elipse... */}
@@ -145,7 +115,7 @@ export default function CopaLoginLayout({
         className="hidden lg:block absolute inset-y-0 right-0 w-[37%]"
         style={{
           clipPath: 'ellipse(85% 160% at 93% 50%)',
-          background: 'rgba(255,251,235,0.94)',
+          background: '#FFFFFF',
           backdropFilter: 'blur(6px)',
           WebkitBackdropFilter: 'blur(6px)',
         }}
@@ -166,9 +136,19 @@ export default function CopaLoginLayout({
 
       {/* Conteudo */}
       <div className="relative z-10 min-h-screen flex flex-col lg:grid lg:grid-cols-[64%_36%]">
-        {/* Esquerda: texto e, travado no rodape, a marca da FIFA */}
-        <div className="flex flex-col justify-end gap-7 px-8 pt-16 pb-12 lg:pl-16 lg:pr-12 lg:pb-16 text-white">
-          <div className="max-w-2xl space-y-4">
+        {/* Esquerda: o logotipo no alto e, no rodape, o nome do torneio sobre a
+            marca da FIFA. O titulo do SISTEMA nao fica aqui - ele vive no painel
+            branco, junto do formulario. */}
+        <div className="flex flex-col justify-between px-8 pt-10 pb-12 lg:pl-16 lg:pr-12 lg:pt-12 lg:pb-16 text-white">
+          {/* Versao de letreiro branco: a preta sumiria na arte azul-marinho */}
+          <img
+            src={comBase(LOGOTIPO_BRANCO)}
+            alt="Copa do Mundo Feminina da FIFA Brasil 2027"
+            className="h-20 lg:h-24 w-auto object-contain self-start"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+          />
+
+          <div className="mt-16 space-y-3">
             {subheadline && (
               <p
                 className="text-[11px] lg:text-xs uppercase tracking-[0.22em] font-semibold"
@@ -177,32 +157,29 @@ export default function CopaLoginLayout({
                 {subheadline}
               </p>
             )}
-            {headline && (
-              <h1 className="text-2xl lg:text-4xl font-bold leading-[1.15]">{headline}</h1>
-            )}
-          </div>
 
-          {/* O arquivo e monocromatico azul-marinho sobre transparente e sumiria no
-              fundo escuro; o filtro passa a marca para branco preservando o alfa.
-              Altura nativa e 39px - manter perto disso evita borrar. */}
-          <img
-            src={comBase("/fifa-logo.webp")}
-            alt="FIFA"
-            className="h-8 lg:h-9 w-auto object-contain self-start"
-            style={{ filter: 'brightness(0) invert(1)' }}
-            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-          />
+            {/* O arquivo e monocromatico azul-marinho sobre transparente e sumiria no
+                fundo escuro; o filtro passa a marca para branco preservando o alfa.
+                Altura nativa e 39px - manter perto disso evita borrar. */}
+            <img
+              src={comBase("/fifa-logo.webp")}
+              alt="FIFA"
+              className="h-8 lg:h-9 w-auto object-contain"
+              style={{ filter: 'brightness(0) invert(1)' }}
+              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+            />
+          </div>
         </div>
 
-        {/* Direita: emblema 235px a 9vh do topo + bloco de login com gap 11vh */}
+        {/* Direita: a marca sem letreiro e o bloco de login */}
         <div
           className="relative flex flex-col items-center justify-start px-6 pt-[5vh] lg:pt-[9vh] pb-16 sm:px-10 lg:bg-transparent"
-          style={{ background: TEMA.creme }}
+          style={{ background: TEMA.branco }}
         >
           <img
-            src={comBase(EMBLEMA_PAINEL)}
+            src={comBase(MARCA)}
             alt="Copa do Mundo Feminina da FIFA 2027"
-            className="h-44 lg:h-[235px] object-contain flex-shrink-0"
+            className="h-28 lg:h-36 object-contain flex-shrink-0"
           />
 
           <div className="w-full max-w-sm flex flex-col items-center gap-4 mt-8 lg:mt-[11vh]">

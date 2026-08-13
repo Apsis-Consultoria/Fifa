@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 import CopaLoginLayout from '@/components/CopaLoginLayout';
-import { TEMA, RAIO_PILULA } from '@/lib/tema';
+import { TEMA, RAIO_PILULA, FONTE_TITULO } from '@/lib/tema';
 
 // Prototipo: nao ha autenticacao real. Ao plugar o backend, este handler chama a
 // Edge Function client-login do Secure Share, que ja emite token de sessao assinado.
@@ -30,16 +30,19 @@ export default function Login() {
 
   return (
     <CopaLoginLayout>
+      {/* O titulo do sistema vive aqui, no painel. Antes ficava sobre a foto, mas
+          com a arte oficial de fundo ele disputava com a taca e o letreiro. */}
       <div className="w-full text-center">
-        <p
-          className="text-[11px] uppercase tracking-[0.2em] font-semibold"
-          style={{ color: TEMA.azul }}
+        {/* Sans-serif neutra e bold, a pedido do Filipe: a Poppins do resto da
+            marca deixava o titulo com desenho geometrico demais para um titulo
+            de sistema. */}
+        <h2
+          className="text-lg lg:text-xl leading-snug uppercase tracking-wide"
+          style={{ color: TEMA.azulMarinho, fontFamily: FONTE_TITULO, fontWeight: 700 }}
         >
-          Portal de Documentação
-        </p>
-        <h2 className="text-xl font-bold mt-1" style={{ color: TEMA.azulMarinho }}>
-          Gestão Regulatória
+          Gestão Regulatória e Licenciamento de Instalações
         </h2>
+        <div className="mt-3 mx-auto h-[3px] w-14 rounded-full" style={{ background: TEMA.amarelo }} />
       </div>
 
       <form onSubmit={entrar} className="w-full space-y-3 mt-2">
